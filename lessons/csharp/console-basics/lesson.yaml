@@ -1,0 +1,6 @@
+id: 1
+title: Your First C# Program
+language: csharp
+entryFile: Program.cs
+files:
+  - Program.cs

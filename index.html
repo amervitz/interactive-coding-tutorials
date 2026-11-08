@@ -3,44 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JavaScript Modules Interactive Tutorial</title>
-  <link rel="stylesheet" href="./vendor/monaco/vs/editor/editor.main.css">
+  <title>Interactive Coding Tutorials</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
-<body>
+<body class="catalog">
   <header>
-    <h1>JavaScript Modules Tutorial</h1>
-    <div class="progress">
-      <span id="progress-text">Lesson 1 of 6</span>
-      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-    </div>
+    <h1>Interactive Coding Tutorials</h1>
+    <a class="repo-link" href="https://github.com/amervitz/interactive-coding-tutorials" target="_blank" rel="noopener noreferrer" aria-label="View source on GitHub (opens in a new tab)">GitHub ↗</a>
   </header>
-  <main>
-    <aside>
-      <div class="lesson-list" id="lesson-list"></div>
-    </aside>
-    <div class="editor-panel">
-      <div class="tabs" id="tabs" role="tablist"></div>
-      <div id="editor-container"></div>
-      <div id="preview-panel" aria-label="Code preview"></div>
-      <div class="output-panel" id="output-panel">
-        <div class="output-header">
-          <span>Console Output</span>
-          <button class="btn btn-secondary" id="clear-output">Clear</button>
-        </div>
-        <div class="output-content" id="output-content"></div>
-      </div>
+  <main class="tutorial-catalog">
+    <h2>Choose a tutorial</h2>
+    <p>Edit real code, run it in your browser, and check your solution.</p>
+    <div class="tutorial-cards">
+      <a class="tutorial-card" href="./tutorials/index.html?lang=js">
+        <span class="tutorial-language">JavaScript</span>
+        <h3>JavaScript Modules</h3>
+        <p>Six lessons covering imports, exports, and module patterns.</p>
+        <span>Open tutorial →</span>
+      </a>
+      <a class="tutorial-card" href="./tutorials/index.html?lang=csharp">
+        <span class="tutorial-language">C#</span>
+        <h3>C# Fundamentals</h3>
+        <p>Ten hands-on lessons from your first program to LINQ, async methods, and project files.</p>
+        <p>Opening this tutorial downloads the C# tools: about 40 MB before compression. No installation required.</p>
+        <span>Open tutorial →</span>
+      </a>
     </div>
-    <div class="lesson-content" id="lesson-content"></div>
   </main>
-  <div class="action-bar">
-    <button class="btn btn-primary" id="run-btn"><span class="keybinding">Ctrl+Enter</span> Run Code</button>
-    <button class="btn btn-secondary" id="reset-btn">Reset Files</button>
-    <button class="btn btn-success" id="verify-btn" disabled>Verify Solution</button>
-    <button class="btn btn-primary" id="next-btn" disabled>Next Lesson</button>
-  </div>
-  <script src="./vendor/monaco/vs/loader.js"></script>
-  <script src="./app.js"></script>
-
 </body>
 </html>

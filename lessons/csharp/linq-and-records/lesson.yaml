@@ -1,0 +1,4 @@
+id: 8
+title: Records and LINQ
+language: csharp
+files: [Program.cs, Learner.cs]

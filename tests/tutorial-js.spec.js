@@ -28,7 +28,7 @@ test('all six exercises run and verify, including delayed dynamic imports', asyn
     if (/\/(?:api|__run__)\//.test(request.url())) runtimeRequests.push(request.url());
   });
   page.on('pageerror', error => errors.push(error.message));
-  await page.goto('/');
+  await page.goto('/tutorials/index.html?lang=js');
   await expect(page.locator('#output-content')).toContainText('Module loaded: main.js');
   await expect(page.locator('#verify-btn')).toBeEnabled();
   await verify(page);
@@ -77,7 +77,7 @@ test('all six exercises run and verify, including delayed dynamic imports', asyn
 });
 
 test('in-memory modules preserve live bindings and computed imports inside the sandbox', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/tutorials/index.html?lang=js');
   await expect(page.locator('#verify-btn')).toBeEnabled();
   await page.evaluate(() => {
     models.set('graph/a.js', monaco.editor.createModel(`
@@ -124,7 +124,7 @@ test('in-memory modules preserve live bindings and computed imports inside the s
 });
 
 test('dynamic imports handle new URL variants and unused invalid modules stay lazy', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/tutorials/index.html?lang=js');
   await expect(page.locator('#verify-btn')).toBeEnabled();
   await page.evaluate(() => {
     models.set('value.js', monaco.editor.createModel('export const identity = {};', 'javascript', monaco.Uri.parse('inmemory:///value.js')));
@@ -148,7 +148,7 @@ test('dynamic imports handle new URL variants and unused invalid modules stay la
 });
 
 test('errors are visible, reruns are fresh, and reset restores deleted files', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/tutorials/index.html?lang=js');
   await expect(page.locator('#verify-btn')).toBeEnabled();
   await edit(page, 'main.js', { suffix: '\nthrow new Error("Example failure");' });
   await run(page);
@@ -171,19 +171,19 @@ test('errors are visible, reruns are fresh, and reset restores deleted files', a
 
 test('server handles query strings and limits public files', async ({ request }) => {
   expect((await request.get('/?lesson=1')).status()).toBe(200);
-  const lessonIndex = await request.get('/lessons/index.js');
+  const lessonIndex = await request.get('/lessons/js/index.js');
   expect(lessonIndex.status()).toBe(200);
   expect(lessonIndex.headers()['content-type']).toContain('text/javascript');
-  expect((await request.get('/lessons/named-exports/checks.js')).status()).toBe(200);
+  expect((await request.get('/lessons/js/named-exports/checks.js')).status()).toBe(200);
   expect((await request.get('/api/lessons')).status()).toBe(404);
   expect((await request.get('/vendor/__proto__/index.js')).status()).toBe(404);
-  expect(await (await request.get('/lessons/index.json')).json()).toHaveLength(6);
-  expect(await (await request.get('/lessons/named-exports/lesson.yaml')).text()).toContain('Named Exports');
-  expect(await (await request.get('/lessons/named-exports/starter/utils.js')).text()).toContain('export const E');
-  expect(await (await request.get('/lessons/re-exporting/starter/shapes/circle.js')).text()).toContain('export function area');
-  expect((await request.get('/lesson-loader.js')).status()).toBe(404);
-  expect((await request.get('/lessons/missing.js')).status()).toBe(404);
-  expect((await request.get('/lessons/../server.js')).status()).toBe(404);
+  expect(await (await request.get('/lessons/js/index.json')).json()).toHaveLength(6);
+  expect(await (await request.get('/lessons/js/named-exports/lesson.yaml')).text()).toContain('Named Exports');
+  expect(await (await request.get('/lessons/js/named-exports/starter/utils.js')).text()).toContain('export const E');
+  expect(await (await request.get('/lessons/js/re-exporting/starter/shapes/circle.js')).text()).toContain('export function area');
+  expect((await request.get('/lessons/loader.js')).status()).toBe(200);
+  expect((await request.get('/lessons/js/missing.js')).status()).toBe(404);
+  expect((await request.get('/lessons/js/../server.js')).status()).toBe(404);
   expect((await request.get('/server.js')).status()).toBe(404);
   expect((await request.get('/package.json')).status()).toBe(404);
   expect((await request.get('/api/runs')).status()).toBe(404);
@@ -191,24 +191,24 @@ test('server handles query strings and limits public files', async ({ request })
 });
 
 test('a lesson loading failure is shown in the console', async ({ page }) => {
-  await page.route('**/lessons/named-exports/checks.js', route => route.abort());
-  await page.goto('/');
+  await page.route('**/lessons/js/named-exports/checks.js', route => route.abort());
+  await page.goto('/tutorials/index.html?lang=js');
   await expect(page.locator('#output-content .error')).toContainText('Unable to start tutorial:');
   await expect(page.locator('#verify-btn')).toBeDisabled();
 });
 
 test('lesson metadata failures are shown in the console', async ({ page }) => {
-  await page.route('**/lessons/named-exports/lesson.yaml', route => route.fulfill({
+  await page.route('**/lessons/js/named-exports/lesson.yaml', route => route.fulfill({
     status: 200, body: 'id: 2\ntitle: Named Exports\nfiles: [utils.js]'
   }));
-  await page.goto('/');
+  await page.goto('/tutorials/index.html?lang=js');
   await expect(page.locator('#output-content .error')).toContainText('starter file list including main.js');
   await expect(page.locator('#verify-btn')).toBeDisabled();
 });
 
 test('mobile layout exposes the console and lesson instructions', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await page.goto('/tutorials/index.html?lang=js');
   await expect(page.locator('#verify-btn')).toBeEnabled();
   await page.locator('#output-content').scrollIntoViewIfNeeded();
   await expect(page.locator('#output-content')).toBeInViewport();

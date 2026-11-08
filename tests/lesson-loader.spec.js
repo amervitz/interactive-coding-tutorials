@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
     return route.fulfill({ status: Object.hasOwn(files, name) ? 200 : 404,
       contentType: name.endsWith('.js') ? 'text/javascript' : 'text/plain', body: files[name] ?? 'Not found' });
   });
-  await page.goto('/');
+  await page.goto('/tutorials/index.html?lang=js');
 });
 
 async function load(page) {
@@ -66,4 +66,24 @@ test('identifies missing starter files and duplicate lesson IDs', async ({ page 
   }
   files['index.json'] = '["example", "another"]';
   await expect(load(page)).rejects.toThrow('unique positive id');
+});
+
+test('loads C# metadata and rejects unsupported languages or unsafe C# paths', async ({ page }) => {
+  files['example/lesson.yaml'] = 'id: 1\ntitle: C#\nlanguage: csharp\nentryFile: Program.cs\nfiles: [Program.cs, Helpers.cs, Example.csproj]';
+  files['example/starter/Example.csproj'] = '<Project Sdk="Microsoft.NET.Sdk" />';
+  files['example/starter/Program.cs'] = 'System.Console.WriteLine(Helpers.Value);';
+  files['example/starter/Helpers.cs'] = 'static class Helpers { public const int Value = 1; }';
+  const [lesson] = await load(page);
+  expect(lesson.language).toBe('csharp');
+  expect(lesson.entryFile).toBe('Program.cs');
+  expect(Object.keys(lesson.files)).toEqual(['Program.cs', 'Helpers.cs', 'Example.csproj']);
+  for (const metadata of [
+    'id: 1\ntitle: C#\nlanguage: csharp\nfiles: [Program.cs, ../outside.cs]',
+    'id: 1\ntitle: Other\nlanguage: other\nfiles: [main.js]',
+    'id: 1\ntitle: C#\nlanguage: csharp\nfiles: [Program.cs, A.csproj, B.csproj]',
+    'id: 1\ntitle: C#\nlanguage: csharp\nentryFile: A.csproj\nfiles: [A.csproj]',
+  ]) {
+    files['example/lesson.yaml'] = metadata;
+    await expect(load(page)).rejects.toThrow('Unable to load lesson "example"');
+  }
 });

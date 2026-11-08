@@ -9,7 +9,7 @@ async function readText(url) {
   return response.text();
 }
 
-export async function loadLessons(root = new URL('./', import.meta.url)) {
+export async function loadLessons(root) {
   root = new URL(root, import.meta.url);
   const slugs = JSON.parse(await readText(new URL('index.json', root)));
   if (!Array.isArray(slugs) || !slugs.length ||
@@ -22,13 +22,20 @@ export async function loadLessons(root = new URL('./', import.meta.url)) {
     try {
       const dir = new URL(`${slug}/`, root);
       const metadata = parse(await readText(new URL('lesson.yaml', dir)));
+      const language = metadata?.language ?? 'javascript';
+      const entryFile = metadata?.entryFile ?? (language === 'csharp' ? 'Program.cs' : 'main.js');
+      const extension = language === 'csharp' ? '(?:cs|csproj)' : 'js';
+      const safeFile = new RegExp(`^(?:[\\w-]+/)*[\\w-][\\w.-]*\\.${extension}$`);
       if (!metadata || !Number.isInteger(metadata.id) || metadata.id < 1 || ids.has(metadata.id) ||
+          !['javascript', 'csharp'].includes(language) ||
           typeof metadata.title !== 'string' || !metadata.title.trim() ||
-          !Array.isArray(metadata.files) || !metadata.files.includes('main.js') ||
+          !Array.isArray(metadata.files) || !metadata.files.includes(entryFile) ||
+          (language === 'csharp' && (typeof entryFile !== 'string' || !entryFile.endsWith('.cs') ||
+            metadata.files.filter(name => typeof name === 'string' && name.endsWith('.csproj')).length > 1)) ||
           new Set(metadata.files).size !== metadata.files.length ||
           metadata.files.some(name => typeof name !== 'string' ||
-            !/^(?:[\w-]+\/)*[\w-][\w.-]*\.js$/.test(name))) {
-        throw new Error('Expected a unique positive id, title, and starter file list including main.js');
+            !safeFile.test(name))) {
+        throw new Error(`Expected a unique positive id, title, supported language, and safe starter file list including ${entryFile}`);
       }
       ids.add(metadata.id);
       const instructions = await readText(new URL('instructions.md', dir));
@@ -44,7 +51,7 @@ export async function loadLessons(root = new URL('./', import.meta.url)) {
           verification.some(check => !check || typeof check.name !== 'string' || typeof check.test !== 'function')) {
         throw new Error('Expected verification checks with a name and test function');
       }
-      return { id: metadata.id, title: metadata.title, content, exercise, files, verification };
+      return { id: metadata.id, title: metadata.title, language, entryFile, content, exercise, files, verification };
     } catch (error) {
       throw new Error(`Unable to load lesson "${slug}": ${error.message}`);
     }

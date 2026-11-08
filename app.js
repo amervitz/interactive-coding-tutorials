@@ -1,12 +1,15 @@
 let LESSONS = [];
+const appBaseUrl = new URL('./', document.currentScript.src);
+let tutorial = null;
+let runner = null;
 
 let currentLesson = 0;
 let editor = null;
 let models = new Map();
-let activeTab = 'main.js';
-let iframe = null;
+let activeTab = null;
 let outputLines = [];
-let stopRun = null;
+let compilationLines = [];
+let activeOutput = 'console';
 let executionVersion = 0;
 let editVersion = 0;
 const completedLessons = new Set();
@@ -16,7 +19,9 @@ const tabsEl = document.getElementById('tabs');
 const editorContainer = document.getElementById('editor-container');
 const lessonContentEl = document.getElementById('lesson-content');
 const outputContentEl = document.getElementById('output-content');
+const compilationContentEl = document.getElementById('compilation-content');
 const runBtn = document.getElementById('run-btn');
+const stopBtn = document.getElementById('stop-btn');
 const resetBtn = document.getElementById('reset-btn');
 const verifyBtn = document.getElementById('verify-btn');
 const nextBtn = document.getElementById('next-btn');
@@ -29,6 +34,7 @@ function initLessons() {
     const el = document.createElement('div');
     el.className = 'lesson-item' + (i === 0 ? ' active' : '');
     el.dataset.index = i;
+    el.title = lesson.title;
     el.innerHTML = `<span class="lesson-number">${i + 1}</span><span class="lesson-title">${lesson.title}</span>`;
     el.addEventListener('click', () => loadLesson(i));
     lessonListEl.appendChild(el);
@@ -37,11 +43,11 @@ function initLessons() {
 
 async function initMonaco() {
   return new Promise((resolve, reject) => {
-    require.config({ paths: { vs: new URL('./vendor/monaco/vs', location.href).href } });
+    require.config({ paths: { vs: new URL('./vendor/monaco/vs', appBaseUrl).href } });
     require(['vs/editor/editor.main'], () => {
       editor = monaco.editor.create(editorContainer, {
         value: '',
-        language: 'javascript',
+        language: tutorial.editorLanguage,
         theme: 'vs-dark',
         automaticLayout: true,
         minimap: { enabled: false },
@@ -64,9 +70,8 @@ async function initMonaco() {
 
 function stopExecution() {
   executionVersion++;
-  if (stopRun) stopRun();
-  if (iframe) iframe.remove();
-  iframe = null;
+  if (runner) runner.stop();
+  if (stopBtn) stopBtn.disabled = true;
   runBtn.disabled = false;
   runBtn.innerHTML = '<span class="keybinding">Ctrl+Enter</span> Run Code';
 }
@@ -89,12 +94,12 @@ function loadLesson(index) {
   models.clear();
 
   Object.entries(lesson.files).forEach(([filename, content]) => {
-    const model = monaco.editor.createModel(content, 'javascript', monaco.Uri.parse(`inmemory:///${filename}`));
+    const model = monaco.editor.createModel(content, filename.endsWith('.csproj') ? 'xml' : lesson.language, monaco.Uri.parse(`inmemory:///${filename}`));
     models.set(filename, model);
   });
 
   renderTabs();
-  switchTab('main.js');
+  switchTab(lesson.entryFile);
   lessonContentEl.innerHTML = lesson.content;
   if (lesson.exercise) {
     const exercise = document.createElement('section');
@@ -110,6 +115,7 @@ function loadLesson(index) {
   results.hidden = true;
   lessonContentEl.appendChild(results);
   clearOutput();
+  selectOutput('console');
   verifyBtn.disabled = true;
   nextBtn.disabled = true;
 }
@@ -156,18 +162,38 @@ function closeTab(filename) {
   }
 }
 
-function clearOutput() {
-  outputLines = [];
-  outputContentEl.innerHTML = '';
+function selectOutput(channel) {
+  activeOutput = channel;
+  if (!compilationContentEl) return;
+  document.querySelectorAll('.output-tabs [role="tab"]').forEach(tab => {
+    const selected = tab.id === `${channel}-output-tab`;
+    tab.setAttribute('aria-selected', String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    document.getElementById(tab.getAttribute('aria-controls')).hidden = !selected;
+  });
 }
 
-function logOutput(text, type = 'log') {
+function clearOutput(channel) {
+  if (!channel || channel === 'console') {
+    outputLines = [];
+    outputContentEl.innerHTML = '';
+  }
+  if (!channel || channel === 'compilation') {
+    compilationLines = [];
+    if (compilationContentEl) compilationContentEl.innerHTML = '';
+  }
+}
+
+function logOutput(text, type = 'log', channel = 'console') {
+  const compilation = channel === 'compilation' && compilationContentEl;
+  const target = compilation ? compilationContentEl : outputContentEl;
   const line = document.createElement('div');
   line.className = `output-line ${type}`;
   line.textContent = text;
-  outputContentEl.appendChild(line);
-  outputContentEl.scrollTop = outputContentEl.scrollHeight;
-  outputLines.push({ text, type });
+  target.appendChild(line);
+  target.scrollTop = target.scrollHeight;
+  (compilation ? compilationLines : outputLines).push({ text, type });
+  if (type === 'error') selectOutput(compilation ? 'compilation' : 'console');
 }
 
 async function runCode() {
@@ -176,11 +202,13 @@ async function runCode() {
   const version = executionVersion;
   const edits = editVersion;
   clearOutput();
+  selectOutput('console');
   nextBtn.disabled = true;
   verifyBtn.disabled = true;
   document.querySelectorAll('.verify-item').forEach(el => el.remove());
   runBtn.disabled = true;
   runBtn.textContent = 'Running...';
+  if (stopBtn) stopBtn.disabled = false;
 
   try {
     const files = {};
@@ -188,55 +216,23 @@ async function runCode() {
       files[filename] = model.getValue();
     });
 
-    await executeInIframe(files, version);
+    await runner.run(files, (text, level, channel) => {
+      if (version === executionVersion) logOutput(text, level, channel);
+    });
   } catch (err) {
     if (version === executionVersion) logOutput(`Execution error: ${err.message}`, 'error');
   } finally {
     if (version !== executionVersion) return;
+    if (stopBtn) stopBtn.disabled = true;
     runBtn.disabled = false;
     runBtn.innerHTML = '<span class="keybinding">Ctrl+Enter</span> Run Code';
     verifyBtn.disabled = edits !== editVersion;
   }
 }
 
-async function executeInIframe(files, version) {
-  const { analyzeFiles } = await import('./module-files.js');
-  const sources = await analyzeFiles(files);
-  if (version !== executionVersion) return;
-  iframe = document.createElement('iframe');
-  iframe.title = 'Lesson code preview';
-  iframe.setAttribute('sandbox', 'allow-scripts');
-  document.getElementById('preview-panel').appendChild(iframe);
-  const frame = iframe;
-  return new Promise((resolve, reject) => {
-    let timer;
-    const cleanup = () => {
-      clearTimeout(timer);
-      window.removeEventListener('message', onMessage);
-    };
-    const onMessage = event => {
-      if (event.source !== frame.contentWindow || !event.data) return;
-      if (event.data.type === 'ready') frame.contentWindow.postMessage({ type: 'run', files: sources }, '*');
-      if (event.data.type === 'log') logOutput(event.data.text, event.data.level);
-      if (event.data.type === 'done') {
-        clearTimeout(timer);
-        // Keep listening for logs from buttons and delayed imports.
-        resolve();
-      }
-    };
-    stopRun = () => { cleanup(); resolve(); stopRun = null; };
-    window.addEventListener('message', onMessage);
-    timer = setTimeout(() => {
-      cleanup();
-      reject(new Error('Code did not finish within 10 seconds. Check for unresolved promises.'));
-    }, 10000);
-    frame.src = './runner.html';
-  });
-}
-
 function verifySolution() {
   const lesson = LESSONS[currentLesson];
-  let allPass = !outputLines.some(line => line.type === 'error');
+  let allPass = ![...outputLines, ...compilationLines].some(line => line.type === 'error');
   nextBtn.disabled = true;
 
   document.querySelectorAll('.verify-item').forEach(el => el.remove());
@@ -275,18 +271,59 @@ function resetFiles() {
 }
 
 async function init() {
-  ({ default: LESSONS } = await import('./lessons/index.js'));
+  const { languages } = await import('./tutorials/languages.js');
+  const language = new URLSearchParams(location.search).get('lang') ?? 'js';
+  if (!Object.hasOwn(languages, language)) {
+    document.getElementById('tutorial-title').textContent = 'Tutorial unavailable';
+    progressText.textContent = 'Choose a tutorial from the home page';
+    throw new Error(`Unsupported tutorial language: ${language}`);
+  }
+  tutorial = languages[language];
+  document.title = tutorial.title;
+  document.getElementById('tutorial-title').textContent = tutorial.title;
+  document.body.dataset.language = tutorial.editorLanguage;
+  document.getElementById('preview-panel').hidden = !tutorial.preview;
+  document.getElementById('runtime-status').hidden = !tutorial.runtimeStatus;
+  document.getElementById('compilation-output-tab').hidden = !tutorial.compilation;
+  stopBtn.hidden = !tutorial.stop;
+  const Runner = await tutorial.loadRunner();
+  runner = new Runner(document.getElementById(tutorial.runnerTarget));
+  window.addEventListener('pagehide', () => runner.stop());
+  ({ default: LESSONS } = await tutorial.loadLessons());
   initLessons();
   await initMonaco();
   loadLesson(0);
+  resetBtn.disabled = false;
+
+  const outputTabs = [...document.querySelectorAll('.output-tabs [role="tab"]')].filter(tab => !tab.hidden);
+  outputTabs.forEach((tab, index) => {
+    const activate = selected => {
+      selectOutput(selected.id === 'compilation-output-tab' ? 'compilation' : 'console');
+    };
+    tab.addEventListener('click', () => activate(tab));
+    tab.addEventListener('keydown', event => {
+      const offsets = { ArrowRight: 1, ArrowLeft: -1, Home: -index, End: outputTabs.length - 1 - index };
+      if (!Object.hasOwn(offsets, event.key)) return;
+      event.preventDefault();
+      const next = outputTabs[(index + offsets[event.key] + outputTabs.length) % outputTabs.length];
+      activate(next);
+      next.focus();
+    });
+  });
 
   runBtn.addEventListener('click', runCode);
+  if (stopBtn) stopBtn.addEventListener('click', () => {
+    stopExecution();
+    verifyBtn.disabled = true;
+    nextBtn.disabled = true;
+    logOutput('Execution stopped.', 'info');
+  });
   resetBtn.addEventListener('click', resetFiles);
   verifyBtn.addEventListener('click', verifySolution);
   nextBtn.addEventListener('click', () => {
     if (currentLesson < LESSONS.length - 1) loadLesson(currentLesson + 1);
   });
-  clearOutputBtn.addEventListener('click', () => { clearOutput(); verifyBtn.disabled = true; nextBtn.disabled = true; });
+  clearOutputBtn.addEventListener('click', () => { clearOutput(activeOutput); verifyBtn.disabled = true; nextBtn.disabled = true; });
   await runCode();
 }
 

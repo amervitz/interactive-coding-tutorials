@@ -2,3 +2,8 @@ node_modules/
 test-results/
 playwright-report/
 dist/
+runtimes/**/bin/
+runtimes/**/obj/
+runtimes/**/publish/
+lessons/**/bin/
+lessons/**/obj/

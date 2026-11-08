@@ -1,0 +1,12 @@
+[
+  "console-basics",
+  "variables-and-types",
+  "conditions",
+  "loops-and-arrays",
+  "methods-and-files",
+  "classes-and-interfaces",
+  "generic-collections",
+  "linq-and-records",
+  "async-and-errors",
+  "project-files"
+]

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coding Tutorial</title>
+  <link rel="stylesheet" href="../vendor/monaco/vs/editor/editor.main.css">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <header>
+    <a class="home-link" href="../index.html">← Tutorials</a>
+    <h1 id="tutorial-title">Loading tutorial…</h1>
+    <div class="progress">
+      <span id="progress-text">Loading lessons…</span>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+    <a class="repo-link" href="https://github.com/amervitz/interactive-coding-tutorials" target="_blank" rel="noopener noreferrer" aria-label="View source on GitHub (opens in a new tab)">GitHub ↗</a>
+  </header>
+  <main>
+    <aside>
+      <div class="lesson-list" id="lesson-list"></div>
+    </aside>
+    <div class="editor-panel">
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <div id="runtime-status" role="status" aria-live="polite" hidden></div>
+      <div id="editor-container"></div>
+      <div id="preview-panel" aria-label="Code preview" hidden></div>
+      <div class="output-panel" id="output-panel">
+        <div class="output-header">
+          <div class="output-tabs" role="tablist" aria-label="Terminal output">
+            <button type="button" id="console-output-tab" role="tab" aria-selected="true" aria-controls="output-content" tabindex="0">Console Output</button>
+            <button type="button" id="compilation-output-tab" role="tab" aria-selected="false" aria-controls="compilation-content" tabindex="-1" hidden>Compilation</button>
+          </div>
+          <button class="btn btn-secondary" id="clear-output">Clear</button>
+        </div>
+        <div class="output-content" id="output-content" role="tabpanel" aria-labelledby="console-output-tab" tabindex="0"></div>
+        <div class="output-content" id="compilation-content" role="tabpanel" aria-labelledby="compilation-output-tab" tabindex="0" hidden></div>
+      </div>
+    </div>
+    <div class="lesson-content" id="lesson-content"></div>
+  </main>
+  <div class="action-bar">
+    <button class="btn btn-primary" id="run-btn" disabled><span class="keybinding">Ctrl+Enter</span> Run Code</button>
+    <button class="btn btn-secondary" id="stop-btn" disabled hidden>Stop</button>
+    <button class="btn btn-secondary" id="reset-btn" disabled>Reset Files</button>
+    <button class="btn btn-success" id="verify-btn" disabled>Verify Solution</button>
+    <button class="btn btn-primary" id="next-btn" disabled>Next Lesson</button>
+  </div>
+  <script src="../vendor/monaco/vs/loader.js"></script>
+  <script src="../app.js"></script>
+
+</body>
+</html>

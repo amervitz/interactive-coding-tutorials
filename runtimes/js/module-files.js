@@ -1,4 +1,4 @@
-import { init, parse } from './vendor/es-module-lexer/lexer.minimal.js';
+import { init, parse } from '../../vendor/es-module-lexer/lexer.minimal.js';
 
 export async function analyzeFiles(files) {
   await init();
