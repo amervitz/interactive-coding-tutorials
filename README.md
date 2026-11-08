@@ -35,6 +35,23 @@ is supported. Open the site in a modern browser with native import-map support
 over HTTP(S), rather than as a `file://` URL. `npm test` builds the static site
 and verifies it using a plain file host as well as the development server.
 
+### GitHub Pages
+
+The `Deploy GitHub Pages` workflow builds and publishes `dist/` only when run
+manually. Pushes do not trigger a deployment, and `dist/` stays out of Git.
+
+1. Commit and push `.github/workflows/deploy-pages.yml` to `main` so GitHub
+   displays the manual workflow controls.
+2. In the repository's **Settings → Pages → Build and deployment**, select
+   **GitHub Actions** as the source. This is a one-time setup step.
+3. Open **Actions → Deploy GitHub Pages → Run workflow**, select `main`, and
+   click **Run workflow**.
+
+After the workflow succeeds, the site is available at
+https://amervitz.github.io/interactive-coding-tutorials/ . The deployment job
+also displays the published URL. Repeat step 3 whenever you want to publish
+an update.
+
 ## Project files
 
 | File | Purpose |
