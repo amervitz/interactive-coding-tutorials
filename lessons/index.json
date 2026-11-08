@@ -1,0 +1,8 @@
+[
+  "module-basics",
+  "named-exports",
+  "default-exports",
+  "re-exporting",
+  "dynamic-imports",
+  "module-patterns"
+]

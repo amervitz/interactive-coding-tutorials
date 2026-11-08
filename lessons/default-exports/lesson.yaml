@@ -1,0 +1,5 @@
+id: 3
+title: Default Exports
+files:
+  - math.js
+  - main.js

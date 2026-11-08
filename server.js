@@ -1,52 +1,33 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const { randomUUID } = require('node:crypto');
 const PORT = Number(process.env.PORT || 3000);
-const runs = new Map();
-const MIME_TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json', '.ttf': 'font/ttf' };
-const runnerHtml = '<!doctype html><html><head><meta charset="utf-8"><style>body{font:14px system-ui;color:#d4d4d4;background:#1e1e1e}button{padding:8px 16px;margin:8px;cursor:pointer}</style></head><body><script src="/runner.js"></script></body></html>';
+const MIME_TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json', '.md': 'text/plain; charset=utf-8', '.yaml': 'text/plain; charset=utf-8', '.ttf': 'font/ttf' };
+const VENDOR_ROOTS = {
+  monaco: path.join(__dirname, 'node_modules', 'monaco-editor', 'min'),
+  'es-module-lexer': path.join(__dirname, 'node_modules', 'es-module-lexer', 'dist'),
+  yaml: path.join(__dirname, 'node_modules', 'yaml', 'browser'),
+  'markdown-it': path.join(__dirname, 'node_modules', 'markdown-it', 'dist', 'browser'),
+};
 function send(res, status, body, type = 'text/plain; charset=utf-8') {
   res.writeHead(status, { 'Content-Type': type, 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
   res.end(body);
 }
-const server = http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
   let pathname;
   try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); }
   catch { return send(res, 400, 'Invalid URL'); }
-  if (req.method === 'POST' && pathname === '/api/runs') {
-    try {
-      let body = '';
-      for await (const chunk of req) {
-        body += chunk;
-        if (Buffer.byteLength(body) > 1024 * 1024) return send(res, 413, 'Files are too large');
-      }
-      const { files } = JSON.parse(body);
-      if (!files || typeof files !== 'object' || Array.isArray(files) || typeof files['main.js'] !== 'string' ||
-          Object.entries(files).some(([name, code]) => !/^(?:[\w-]+\/)*[\w.-]+\.js$/.test(name) || typeof code !== 'string')) {
-        return send(res, 400, 'Expected JavaScript files including main.js');
-      }
-      const id = randomUUID();
-      if (runs.size >= 100) runs.delete(runs.keys().next().value);
-      runs.set(id, files);
-      return send(res, 201, JSON.stringify({ url: `/runs/${id}/` }), 'application/json');
-    } catch { return send(res, 400, 'Invalid run request'); }
-  }
   if (!['GET', 'HEAD'].includes(req.method)) return send(res, 405, 'Method not allowed');
-  const run = pathname.match(/^\/runs\/([^/]+)\/(.*)$/);
-  if (run) {
-    const files = runs.get(run[1]);
-    if (!files) return send(res, 404, 'Run expired. Run the code again.');
-    if (!run[2]) return send(res, 200, runnerHtml, MIME_TYPES['.html']);
-    if (!Object.hasOwn(files, run[2])) return send(res, 404, 'Module not found');
-    return send(res, 200, files[run[2]], MIME_TYPES['.js']);
-  }
   let file;
-  if (['/', '/index.html', '/app.js', '/runner.js'].includes(pathname)) {
+  if (['/', '/index.html', '/app.js', '/module-files.js', '/runner.js', '/runner.html', '/styles.css', '/preview.css'].includes(pathname)) {
     file = path.join(__dirname, pathname === '/' ? 'index.html' : pathname.slice(1));
-  } else if (pathname.startsWith('/vendor/monaco/')) {
-    const root = path.join(__dirname, 'node_modules', 'monaco-editor', 'min');
-    file = path.resolve(root, pathname.slice('/vendor/monaco/'.length));
+  } else if (/^\/lessons\/(?:index\.(?:js|json)|loader\.js|[a-z0-9-]+\/(?:checks\.js|lesson\.yaml|instructions\.md|starter\/(?:[\w-]+\/)*[\w-][\w.-]*\.js))$/.test(pathname)) {
+    file = path.join(__dirname, pathname.slice(1));
+  } else if (pathname.startsWith('/vendor/')) {
+    const [, , vendor, ...parts] = pathname.split('/');
+    if (!Object.hasOwn(VENDOR_ROOTS, vendor)) return send(res, 404, 'Not found');
+    const root = VENDOR_ROOTS[vendor];
+    file = path.resolve(root, parts.join('/'));
     if (!file.startsWith(root + path.sep)) return send(res, 403, 'Forbidden');
   } else return send(res, 404, 'Not found');
   fs.readFile(file, (err, content) => {

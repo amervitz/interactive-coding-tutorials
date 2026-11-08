@@ -1,0 +1,6 @@
+id: 6
+title: Module Patterns & Best Practices
+files:
+  - config.js
+  - logger.js
+  - main.js

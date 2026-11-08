@@ -1,0 +1,5 @@
+id: 5
+title: Dynamic Imports
+files:
+  - heavy-module.js
+  - main.js

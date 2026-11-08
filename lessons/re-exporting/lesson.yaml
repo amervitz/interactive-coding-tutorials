@@ -1,0 +1,7 @@
+id: 4
+title: Re-exporting
+files:
+  - shapes/circle.js
+  - shapes/rectangle.js
+  - shapes/index.js
+  - main.js
