@@ -1,6 +1,8 @@
 # JavaScript Modules Tutorial
 
-Requires Node.js 20 or newer.
+Requires Node.js 24 or newer. Local development and GitHub Pages builds use
+Node.js 24, recorded in `.nvmrc`. If you use nvm, run `nvm install 24` and `nvm use 24`
+before installing dependencies.
 
 ```sh
 npm ci
