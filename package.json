@@ -1,0 +1,22 @@
+{
+  "name": "javascript-modules-tutorial",
+  "version": "1.0.0",
+  "description": "Interactive JavaScript modules tutorial",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "playwright test"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "monaco-editor": "^0.45.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  }
+}
